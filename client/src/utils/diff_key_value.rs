@@ -17,27 +17,28 @@ pub fn diff_key_value<'a, K, V>(
         K: Hash + Eq,
         V: Eq,
 {
-    let old_keys: Vec<&K> = iter_old.iter().map(|i| i.0).collect();
-    let new_keys: Vec<&K> = iter_new.iter().map(|i| i.0).collect();
+    todo!()
+    // let old_keys: Vec<&K> = iter_old.iter().map(|i| i.0).collect();
+    // let new_keys: Vec<&K> = iter_new.iter().map(|i| i.0).collect();
 
-    let old_keys_set: HashSet<&K, RandomState> = HashSet::from_iter(old_keys);
-    let new_keys_set: HashSet<&K, RandomState> = HashSet::from_iter(new_keys);
+    // let old_keys_set: HashSet<&K, RandomState> = HashSet::from_iter(old_keys);
+    // let new_keys_set: HashSet<&K, RandomState> = HashSet::from_iter(new_keys);
 
-    let mut added = vec![];
-    let mut removed = vec![];
+    // let mut added = vec![];
+    // let mut removed = vec![];
 
-    for entry in iter_new {
-        if old_keys_set.contains(&entry.0) {
-            added.push(entry);
-        }
-    }
+    // for entry in iter_new {
+    //     if old_keys_set.contains(&entry.0) {
+    //         added.push(entry);
+    //     }
+    // }
 
-    KeyValueDiff {
-        added,
-        removed,
-        changed: vec![],
-        unchanged: vec![],
-    }
+    // KeyValueDiff {
+    //     added,
+    //     removed,
+    //     changed: vec![],
+    //     unchanged: vec![],
+    // }
 
     // let old_set: HashSet<&T, RandomState> = HashSet::from_iter(old_vec.iter());
     // let new_set: HashSet<&T, RandomState> = HashSet::from_iter(new_vec.iter());
