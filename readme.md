@@ -1,3 +1,3 @@
 # Purple portal
 
-A CLI utility made specifically for syncing vaults between clients.
+Work in progress plugin for syncing Obsidian vaults between clients.
