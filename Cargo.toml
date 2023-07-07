@@ -1,0 +1,9 @@
+[workspace]
+members = [
+    "server",
+    "cli",
+    "client"
+]
+default-members = [
+    "cli"
+]
