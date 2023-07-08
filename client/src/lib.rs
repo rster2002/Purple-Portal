@@ -12,6 +12,7 @@ use crate::dir_hash_walker::DirHashWalker;
 use crate::models::local_state::LocalState;
 use crate::prelude::*;
 use crate::state_manager::StateManager;
+use crate::traits::fs_adapter::FsAdapter;
 
 pub mod error;
 pub(crate) mod prelude;
@@ -19,22 +20,30 @@ mod dir_hash_walker;
 mod models;
 pub mod state_manager;
 pub(crate) mod utils;
+pub mod traits;
+pub mod fs_adapters;
 
-pub struct PurplePortalClient {
+pub struct PurplePortalClient<T>
+    where T: FsAdapter,
+{
     pub(crate) vault_root: PathBuf,
     pub(crate) config_root: PathBuf,
+    pub(crate) fs_adapter: T,
 }
 
-impl PurplePortalClient {
-    pub async fn init(vault_root: PathBuf) -> Result<Self> {
+impl<T> PurplePortalClient<T>
+    where T: FsAdapter,
+{
+    pub async fn init(vault_root: PathBuf, fs_adapter: T) -> Result<Self> {
         let config_root = vault_root.join(".purple-portal");
 
-        tokio::fs::create_dir_all(&config_root)
+        fs_adapter.create_dir_all(&config_root)
             .await?;
 
         Ok(Self {
             vault_root,
             config_root,
+            fs_adapter,
         })
     }
 

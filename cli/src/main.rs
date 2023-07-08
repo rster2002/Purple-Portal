@@ -1,6 +1,7 @@
 use std::env;
 use crate::models::input::cli_root::{ClientCommand, RootCommand, ServerCommand};
 use clap::Parser;
+use client::fs_adapters::tokio_fs_adapter::TokioFsAdapter;
 use client::PurplePortalClient;
 
 mod models;
@@ -28,8 +29,9 @@ async fn main() {
                         .expect("Failed to read current path")
                         .join(sync_options.path);
 
+                    let adapter = TokioFsAdapter;
 
-                    let client = PurplePortalClient::init(vault_path)
+                    let client = PurplePortalClient::init(vault_path, adapter)
                         .await
                         .expect("Failed to start client");
 
