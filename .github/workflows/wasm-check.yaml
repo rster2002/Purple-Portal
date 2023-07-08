@@ -1,0 +1,16 @@
+on:
+  push:
+    branches-ignore:
+      - 'none'
+
+name: Wasm check
+
+jobs:
+  build:
+    name: Build WASM package
+    runs-on: ubuntu-latest
+    steps:
+      - name: wasm-pack-action
+        uses: jetli/wasm-pack-action@v0.4.0
+      - run: cd ./wasm
+      - run: wasm-pack build --target web
