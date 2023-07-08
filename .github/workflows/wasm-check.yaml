@@ -3,7 +3,7 @@ on:
     branches-ignore:
       - 'none'
 
-name: Wasm check
+name: Check WASM compatability
 
 jobs:
   build:
