@@ -27,7 +27,9 @@ impl<'a, T> StateManager<'a, T>
     }
 
     pub async fn get_fs_state(&self) -> Result<LocalState> {
-        let hashes = DirHashWalker::walk(&self.client.vault_root)
+        let dir_hash_walker = DirHashWalker::new(self.client);
+
+        let hashes = dir_hash_walker.walk(&self.client.vault_root)
             .await?;
 
         let files: HashMap<PathBuf, u64> = hashes

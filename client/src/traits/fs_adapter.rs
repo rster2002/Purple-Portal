@@ -5,7 +5,7 @@ use std::path::PathBuf;
 pub trait FsAdapterError: Error {}
 
 #[async_trait::async_trait]
-pub trait FsAdapter {
+pub trait FsAdapter: Sync + Send {
     type Err: FsAdapterError;
 
     async fn read_file(&self, path: &PathBuf) -> Result<Vec<u8>, Self::Err>;

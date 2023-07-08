@@ -1,10 +1,11 @@
 use std::env;
 use crate::models::input::cli_root::{ClientCommand, RootCommand, ServerCommand};
 use clap::Parser;
-use client::fs_adapters::tokio_fs_adapter::TokioFsAdapter;
 use client::PurplePortalClient;
+use crate::tokio_fs_adapter::TokioFsAdapter;
 
 mod models;
+mod tokio_fs_adapter;
 
 #[tokio::main]
 async fn main() {

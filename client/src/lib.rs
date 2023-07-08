@@ -21,7 +21,6 @@ mod models;
 pub mod state_manager;
 pub(crate) mod utils;
 pub mod traits;
-pub mod fs_adapters;
 
 pub struct PurplePortalClient<T>
     where T: FsAdapter,
