@@ -48,6 +48,10 @@ impl FsAdapter for TokioFsAdapter {
     async fn is_dir(&self, path: &PathBuf) -> Result<bool, Self::Err> {
         Ok(path.is_dir())
     }
+
+    async fn exists(&self, path: &PathBuf) -> Result<bool, Self::Err> {
+        Ok(path.exists())
+    }
 }
 
 #[derive(Debug, Error)]

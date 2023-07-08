@@ -16,4 +16,5 @@ pub trait FsAdapter: Sync + Send {
 
     async fn is_file(&self, path: &PathBuf) -> Result<bool, Self::Err>;
     async fn is_dir(&self, path: &PathBuf) -> Result<bool, Self::Err>;
+    async fn exists(&self, path: &PathBuf) -> Result<bool, Self::Err>;
 }

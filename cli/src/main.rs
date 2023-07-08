@@ -1,7 +1,9 @@
 use std::env;
+use std::path::PathBuf;
 use crate::models::input::cli_root::{ClientCommand, RootCommand, ServerCommand};
 use clap::Parser;
 use client::PurplePortalClient;
+use server::PurplePortalServer;
 use crate::tokio_fs_adapter::TokioFsAdapter;
 
 mod models;
@@ -15,7 +17,15 @@ async fn main() {
         RootCommand::Server(server_command) => {
             match server_command {
                 ServerCommand::Start(options) => {
+                    let server = PurplePortalServer::new(
+                        "a",
+                        "b",
+                        10,
+                        "./".into(),
+                    );
 
+                    server.start()
+                        .await;
                 }
                 ServerCommand::Remove(_) => {}
             }

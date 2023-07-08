@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
-use crate::dir_hash_walker::DirHashWalker;
+use crate::recursive_read_dir::RecursiveReadDir;
 use crate::models::local_state::LocalState;
 use crate::prelude::*;
 use crate::state_manager::StateManager;
@@ -16,7 +16,7 @@ use crate::traits::fs_adapter::FsAdapter;
 
 pub mod error;
 pub(crate) mod prelude;
-mod dir_hash_walker;
+mod recursive_read_dir;
 mod models;
 pub mod state_manager;
 pub(crate) mod utils;
@@ -57,8 +57,8 @@ impl<T> PurplePortalClient<T>
     pub async fn run_sync(&self) -> Result<()> {
         let state_manager = StateManager::new(self);
 
-        let local_state = state_manager.take_fs_snapshot()
-            .await;
+        state_manager.diff_all()
+            .await?;
 
         Ok(())
     }
