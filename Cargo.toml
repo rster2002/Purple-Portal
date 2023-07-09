@@ -3,7 +3,8 @@ members = [
     "server",
     "cli",
     "client",
-    "wasm"
+    "wasm",
+    "yrs-testing"
 ]
 default-members = [
     "cli"
