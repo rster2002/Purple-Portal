@@ -69,4 +69,9 @@ impl FsAdapter for JsFsAdapter {
         foo();
         todo!()
     }
+
+    async fn exists(&self, path: &PathBuf) -> Result<bool, Self::Err> {
+        foo();
+        todo!()
+    }
 }
