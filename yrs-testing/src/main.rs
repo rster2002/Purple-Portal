@@ -1,5 +1,7 @@
 use std::fs;
 use std::path::PathBuf;
+use diamond_types::AgentId;
+use diamond_types::list::OpLog;
 
 fn main() {
     let mut server = MdDocument::new(1, "./bin/server.bin", "test.md");
@@ -22,7 +24,8 @@ fn main() {
 
 struct MdDocument {
     fs_path: PathBuf,
-    text: ditto::Text,
+    text: OpLog,
+    agent_id: AgentId,
 }
 
 impl MdDocument {
@@ -33,12 +36,13 @@ impl MdDocument {
     ) -> Self {
         let fs_path = fs_path.into();
 
-        let mut i = ditto::Text::new();
-        let _ = i.add_site_id(id);
+        let mut text = OpLog::new();
+        let agent_id = text.get_or_create_agent_id(&*id.to_string());
 
         Self {
             fs_path,
-            text: i,
+            text,
+            agent_id,
         }
     }
 
@@ -47,16 +51,16 @@ impl MdDocument {
         index: u32,
         content: impl Into<String>,
     ) {
-        self.text.replace(index as usize, 0, &*content.into());
+        self.text.add_insert(self.agent_id, index as usize, &*content.into());
     }
 
-    pub fn remove(
-        &mut self,
-        index: u32,
-        len: u32,
-    ) {
-        self.text.replace(index as usize, len as usize, "");
-    }
+    // pub fn remove(
+    //     &mut self,
+    //     index: u32,
+    //     len: u32,
+    // ) {
+    //     self.text.replace(index as usize, len as usize, "");
+    // }
 
     pub fn get_content(&self) -> String {
         self.text.local_value()
