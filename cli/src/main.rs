@@ -17,12 +17,7 @@ async fn main() {
         RootCommand::Server(server_command) => {
             match server_command {
                 ServerCommand::Start(options) => {
-                    let server = PurplePortalServer::new(
-                        "a",
-                        "b",
-                        10,
-                        "./".into(),
-                    );
+                    let mut server = PurplePortalServer::new();
 
                     server.start()
                         .await;
