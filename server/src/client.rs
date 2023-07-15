@@ -49,7 +49,7 @@ impl Client {
 
                     v = rx.recv() => {
                         println!("{} Sending message", id);
-                        let Some(message) = rx.recv().await else {
+                        let Some(message) = v else {
                             break;
                         };
 
