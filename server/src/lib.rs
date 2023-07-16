@@ -5,11 +5,11 @@ pub mod modules;
 mod client;
 
 use std::path::PathBuf;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use rand::{RngCore, thread_rng};
 use rocket::futures::{SinkExt, StreamExt};
 use tokio::net::TcpListener;
-use tokio::sync::{mpsc, Mutex, oneshot};
+use tokio::sync::{mpsc, Mutex, oneshot, RwLock};
 use tokio::sync::mpsc::Sender;
 use tokio_tungstenite::accept_async;
 use tokio_tungstenite::tungstenite::Message;
@@ -17,13 +17,13 @@ use modules::cors;
 use crate::client::Client;
 
 pub struct PurplePortalServer {
-    senders: Arc<Mutex<Vec<(u32, Sender<String>)>>>,
+    senders: Arc<RwLock<Vec<(u32, Sender<String>)>>>,
 }
 
 impl PurplePortalServer {
     pub fn new() -> Self {
         Self {
-            senders: Arc::new(Mutex::new(vec![])),
+            senders: Arc::new(RwLock::new(vec![])),
         }
     }
 
@@ -43,13 +43,17 @@ impl PurplePortalServer {
 
                 println!("Broadcast {}", &message);
 
-                let guard = internal_arc.lock().await;
-
+                let guard = internal_arc.read().await;
                 for (id, sender) in guard.iter() {
                     println!("Message to {}", id);
-                    sender.send(message.to_string())
-                        .await
-                        .unwrap();
+                    let result = sender.send(message.to_string())
+                        .await;
+
+                    if let Err(e) = result {
+                        if !sender.is_closed() {
+                            println!("{:?}", e);
+                        }
+                    }
                 }
             }
         });
@@ -69,8 +73,29 @@ impl PurplePortalServer {
             )
                 .await;
 
-            self.senders.lock().await.push((id, sender));
-            broadcast.clone().send("Hello world".to_string()).await.unwrap();
+            let local_sender = sender.clone();
+            let local_senders_vec = self.senders.clone();
+            tokio::spawn(async move {
+                local_sender.closed().await;
+
+                // Find the index for the sender. Scoped to make sure the read lock is used as short
+                // as possible.
+                let mut index_result = {
+                    local_senders_vec.read()
+                        .await
+                        .iter()
+                        .enumerate()
+                        .find(|(_, (v, _))| v == &id)
+                        .map(|i| i.0)
+                };
+
+                if let Some(index) = index_result {
+                    println!("{} Removed sender", id);
+                    local_senders_vec.write().await.swap_remove(index);
+                }
+            });
+
+            self.senders.write().await.push((id, sender));
         }
     }
 }
