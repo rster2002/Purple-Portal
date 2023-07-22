@@ -14,5 +14,8 @@ serde_bencode = "^0.2.3"
 bincode = "1.3.3"
 async-trait = "0.1.71"
 similar = "2.2.1"
-diamond-types = "1.0.0"
+diamond-types = { version = "1.0.0", features = ["serde"] }
 uuid = { version = "1.2.2", features = ["v4", "fast-rng", "macro-diagnostics"] }
+
+[target.wasm32-unknown-unknown.dependencies]
+uuid = { version = "1.2.2", features = ["v4", "fast-rng", "macro-diagnostics", "js"] }
