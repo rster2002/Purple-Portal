@@ -41,8 +41,10 @@ async fn main() {
                         .await
                         .expect("Failed to start client");
 
-                    let _ = client.run_sync()
+                    let result = client.run_sync()
                         .await;
+
+                    dbg!(result);
                 },
             }
         }

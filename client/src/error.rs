@@ -1,3 +1,6 @@
+
+use std::string::FromUtf8Error;
+use diamond_types::list::encoding::encode_tools::ParseError;
 use thiserror::Error;
 use crate::traits::fs_adapter::{FsAdapter, FsAdapterError};
 
@@ -11,6 +14,12 @@ pub enum Error {
 
     #[error("FS Adapter error: {0}")]
     FsAdapterError(String),
+
+    #[error("Failed to parse oplog: {0}")]
+    OpLogParseError(#[from] ParseError),
+
+    #[error("UTF-8 encoding error: {0}")]
+    Utf8EncodingError(#[from] FromUtf8Error),
 }
 
 impl<T> From<T> for Error
