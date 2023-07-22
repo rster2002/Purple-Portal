@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 
 use crate::recursive_read_dir::RecursiveReadDir;
-use crate::models::local_state::LocalState;
+use crate::models::local_state::LocalOpLog;
 use crate::prelude::*;
 use crate::state_manager::StateManager;
 use crate::traits::fs_adapter::FsAdapter;
