@@ -16,3 +16,4 @@ Cargo.lock
 
 Test-vault
 wasm/pkg
+.idea
