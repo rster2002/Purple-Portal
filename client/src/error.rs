@@ -2,6 +2,7 @@
 use std::string::FromUtf8Error;
 use diamond_types::list::encoding::encode_tools::ParseError;
 use thiserror::Error;
+use crate::state_manager::StateError;
 use crate::traits::fs_adapter::{FsAdapter, FsAdapterError};
 
 #[derive(Debug, Error)]
@@ -20,6 +21,9 @@ pub enum Error {
 
     #[error("UTF-8 encoding error: {0}")]
     Utf8EncodingError(#[from] FromUtf8Error),
+
+    #[error("State error: {0}")]
+    StateError(#[from] StateError),
 }
 
 impl<T> From<T> for Error

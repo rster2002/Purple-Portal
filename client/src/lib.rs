@@ -22,6 +22,9 @@ pub mod state_manager;
 pub(crate) mod utils;
 pub mod traits;
 
+#[cfg(test)]
+mod tests;
+
 pub struct PurplePortalClient<T>
     where T: FsAdapter,
 {

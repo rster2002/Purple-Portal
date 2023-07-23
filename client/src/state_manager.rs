@@ -3,8 +3,9 @@ use std::ops::Range;
 use std::path::{Path, PathBuf};
 use diamond_types::list::encoding::EncodeOptions;
 use diamond_types::list::{Branch, OpLog};
-use diamond_types::LocalVersion;
+use diamond_types::{AgentId, LocalVersion};
 use similar::{Change, ChangeTag, TextDiff};
+use thiserror::Error;
 use uuid::{uuid, Uuid};
 
 use crate::recursive_read_dir::RecursiveReadDir;
@@ -18,6 +19,12 @@ pub struct StateManager<'a, T>
     where T: FsAdapter,
 {
     client: &'a PurplePortalClient<T>,
+}
+
+#[derive(Debug, Error)]
+pub enum StateError {
+    #[error("Divergent content detected")]
+    DivergentContent,
 }
 
 impl<'a, T> StateManager<'a, T>
@@ -74,7 +81,7 @@ impl<'a, T> StateManager<'a, T>
                     .await?
             )?;
 
-            if current_content != "" {
+            if current_content.is_empty() {
                 let _ = log.add_insert(agent, 0, &*current_content);
             }
 
@@ -106,68 +113,17 @@ impl<'a, T> StateManager<'a, T>
             let mut op_log = OpLog::load_from(&local_log.op_log)?;
             let agent = op_log.get_or_create_agent_id(&*local_log.agent_id);
 
-            let mut branch = Branch::new_at_tip(&op_log);
-            let branch_content = branch.content().to_string();
-
             let current_content = String::from_utf8(
                 self.client.fs_adapter
                     .read_file(abs_path)
                     .await?
             )?;
 
-            let diff: Vec<Change<&str>> = TextDiff::from_chars(&branch_content, &current_content)
-                .iter_all_changes()
-                .collect();
-
-            let mut added_indexes = vec![];
-            let mut removed_indexes = vec![];
-            for item in diff {
-                match item.tag() {
-                    ChangeTag::Equal => {}
-                    ChangeTag::Delete => {
-                        let index = item.old_index()
-                            .expect("Deleted items should always have an old index");
-
-                        let removed_offset = removed_indexes.iter()
-                            .filter(|x| &index > x)
-                            .count();
-
-                        let added_offset = added_indexes.iter()
-                            .filter(|x| &index > x)
-                            .count();
-
-                        let final_index = index - removed_offset + added_offset;
-                        dbg!(&final_index);
-
-                        let _ = branch.delete_without_content(&mut op_log, agent, final_index..(final_index + 1));
-                        removed_indexes.push(index);
-                    }
-                    ChangeTag::Insert => {
-                        let index = item.new_index()
-                            .expect("Inserted items should always have a new index");
-
-                        let removed_offset = removed_indexes.iter()
-                            .filter(|x| &index > x)
-                            .count();
-
-                        let added_offset = added_indexes.iter()
-                            .filter(|x| &index > x)
-                            .count();
-
-                        let final_index = if added_indexes.len() < removed_indexes.len() {
-                            index - removed_offset + added_offset
-                        } else {
-                            index
-                        };
-
-                        let _ = branch.insert(&mut op_log, agent, final_index, item.value());
-                        added_indexes.push(index);
-                    }
-                }
-            }
-
-            let op_log_content = Branch::new_at_tip(&op_log).content().to_string();
-            assert_eq!(op_log_content, current_content);
+            Self::apply_to_op_log(
+                &mut op_log,
+                agent,
+                current_content,
+            )?;
 
             let new_local = LocalOpLog {
                 agent_id: local_log.agent_id,
@@ -181,5 +137,112 @@ impl<'a, T> StateManager<'a, T>
         }
 
         Ok(())
+    }
+
+    fn apply_to_op_log(op_log: &mut OpLog, agent: AgentId, content: String) -> Result<()> {
+        let mut branch = Branch::new_at_tip(&op_log);
+        let branch_content = branch.content().to_string();
+
+        let diff: Vec<Change<&str>> = TextDiff::from_chars(&branch_content, &content)
+            .iter_all_changes()
+            .collect();
+
+        let mut added_indexes = vec![];
+        let mut removed_indexes = vec![];
+        for item in diff {
+            match item.tag() {
+                ChangeTag::Equal => {}
+                ChangeTag::Delete => {
+                    let index = item.old_index()
+                        .expect("Deleted items should always have an old index");
+
+                    let removed_offset = removed_indexes.iter()
+                        .filter(|x| &index > x)
+                        .count();
+
+                    let added_offset = added_indexes.iter()
+                        .filter(|x| &index > x)
+                        .count();
+
+                    let final_index = index - removed_offset + added_offset;
+
+                    let _ = branch.delete_without_content(op_log, agent, final_index..(final_index + 1));
+                    removed_indexes.push(index);
+                }
+                ChangeTag::Insert => {
+                    let index = item.new_index()
+                        .expect("Inserted items should always have a new index");
+
+                    let removed_offset = removed_indexes.iter()
+                        .filter(|x| &index > x)
+                        .count();
+
+                    let added_offset = added_indexes.iter()
+                        .filter(|x| &index > x)
+                        .count();
+
+                    let final_index = if added_indexes.len() < removed_indexes.len() {
+                        index - removed_offset + added_offset
+                    } else {
+                        index
+                    };
+
+                    let _ = branch.insert(op_log, agent, final_index, item.value());
+                    added_indexes.push(index);
+                }
+            }
+        }
+
+        branch.merge(&op_log, op_log.local_version_ref());
+
+        let op_log_content = Branch::new_at_tip(&op_log).content().to_string();
+
+        if op_log_content != content {
+            return Err(StateError::DivergentContent.into());
+        }
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use diamond_types::list::encoding::EncodeOptions;
+    use diamond_types::list::OpLog;
+    use crate::state_manager::StateManager;
+    use crate::tests::TestFsAdapter;
+
+    #[test]
+    fn diffs_are_applied_correctly() {
+        let cases = [
+            ("abcde", "agbdf"),
+            ("abc", "defghi"),
+            ("a", "bcd"),
+            ("abc", "e"),
+            ("", "abcdef"),
+            ("abc", "abcde"),
+            ("ace", "abcde"),
+            ("bd", "acde"),
+            ("something cool right?", "something that should not crash"),
+        ];
+
+        for case in cases {
+            dbg!(&case);
+
+            let mut op_log = OpLog::new();
+            let agent = op_log.get_or_create_agent_id("abc");
+
+            if !case.0.is_empty() {
+                let _ = op_log.add_insert(agent, 0, case.0);
+            }
+
+            let mut op_log = OpLog::load_from(&*op_log.encode(EncodeOptions::default()))
+                .unwrap();
+
+            let agent = op_log.get_or_create_agent_id("abc");
+
+            let result = StateManager::<TestFsAdapter>::apply_to_op_log(&mut op_log, agent, case.1.to_string());
+            assert!(result.is_ok());
+        }
     }
 }

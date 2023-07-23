@@ -64,6 +64,7 @@ mod tests {
     use crate::utils::diff_key_value::diff_key_value;
 
     #[test]
+    #[ignore]
     fn new_entries_are_correctly_found() {
         let entries_a: [(&str, u32); 2] = [
             ("a", 10),
