@@ -66,12 +66,16 @@ impl PurplePortalServer {
                 .expect("Failed to start server");
 
             let id = rnd.next_u32();
-            let sender = Client::start(
+            let client = Client::accept(
                 id,
                 stream,
-                broadcast.clone(),
+                broadcast.clone()
             )
-                .await;
+                .await
+                .unwrap();
+
+            let sender = client.get_new_sender();
+            client.start();
 
             let local_sender = sender.clone();
             let local_senders_vec = self.senders.clone();

@@ -15,6 +15,7 @@ use crate::PurplePortalClient;
 use crate::traits::fs_adapter::FsAdapter;
 use crate::utils::diff::Diff;
 
+/// Responsible for updating the local op logs.
 pub struct StateManager<'a, T>
     where T: FsAdapter,
 {
