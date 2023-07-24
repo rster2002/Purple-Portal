@@ -52,7 +52,7 @@ impl<'a, T> StateManager<'a, T>
             });
 
         for path in paths {
-            let i = self.diff_path(&path)
+            let _ = self.diff_path(&path)
                 .await?;
         }
 
@@ -147,64 +147,29 @@ impl<'a, T> StateManager<'a, T>
             .iter_all_changes()
             .collect();
 
-        let mut added_indexes = vec![];
+        let delete_items = diff.iter()
+            .filter(|x| matches!(x.tag(), ChangeTag::Delete));
+
         let mut removed_indexes = vec![];
-        dbg_print(&branch.content().to_string());
-        for item in diff {
+        for item in delete_items {
+            let index = item.old_index().unwrap();
 
-            match item.tag() {
-                ChangeTag::Equal => {}
-                ChangeTag::Delete => {
-                    dbg!(&item);
-                    let index = item.old_index()
-                        .expect("Deleted items should always have an old index");
+            let removed_offset = removed_indexes.iter()
+                .filter(|x| &index > x)
+                .count();
 
-                    let removed_offset = removed_indexes.iter()
-                        .filter(|x| &index > x)
-                        .count();
+            let final_index = index - removed_offset;
 
-                    let added_offset = added_indexes.iter()
-                        .filter(|x| &index > x)
-                        .count();
+            let _ = branch.delete_without_content(op_log, agent, final_index..(final_index + 1));
+            removed_indexes.push(final_index);
+        }
 
-                    let final_index = index - removed_offset + added_offset;
+        let insert_items = diff.iter()
+            .filter(|x| matches!(x.tag(), ChangeTag::Insert));
 
-
-                    let _ = branch.delete_without_content(op_log, agent, final_index..(final_index + 1));
-                    removed_indexes.push(index);
-                    dbg_print(&branch.content().to_string());
-                    dbg!(added_offset);
-                    dbg!(removed_offset);
-                    dbg!(final_index);
-                }
-                ChangeTag::Insert => {
-                    dbg!(&item);
-                    let index = item.new_index()
-                        .expect("Inserted items should always have a new index");
-
-                    let removed_offset = removed_indexes.iter()
-                        .filter(|x| &index > x)
-                        .count();
-
-                    let added_offset = added_indexes.iter()
-                        .filter(|x| &index > x)
-                        .count();
-
-
-                    let final_index = index;
-                    // let final_index = if added_indexes.len() < removed_indexes.len() {
-                    //     index - removed_offset + added_offset
-                    // } else {
-                    //     index
-                    // };
-
-                    let _ = branch.insert(op_log, agent, final_index, item.value());
-                    added_indexes.push(index);
-
-                    dbg_print(&branch.content().to_string());
-                    dbg!(final_index);
-                }
-            }
+        for item in insert_items {
+            let index = item.new_index().unwrap();
+            let _ = branch.insert(op_log, agent, index, item.value());
         }
 
         branch.merge(&op_log, op_log.local_version_ref());
@@ -219,21 +184,6 @@ impl<'a, T> StateManager<'a, T>
     }
 }
 
-#[cfg(debug_assertions)]
-fn dbg_print(string: &String) {
-    let str: String = string.chars()
-        .map(|c| format!("{: >3}", c))
-        .collect();
-
-    let ind: String = string.chars()
-        .enumerate()
-        .map(|i| format!("{: >3}", i.0))
-        .collect();
-
-    println!("{}", str);
-    println!("{}", ind);
-}
-
 #[cfg(test)]
 mod tests {
     use diamond_types::list::encoding::EncodeOptions;
@@ -244,15 +194,15 @@ mod tests {
     #[test]
     fn diffs_are_applied_correctly() {
         let cases = [
-            // ("abcde", "agbdf"),
-            // ("abc", "defghi"),
-            // ("a", "bcd"),
-            // ("abc", "e"),
-            // ("", "abcdef"),
-            // ("abc", "abcde"),
-            // ("ace", "abcde"),
-            // ("bd", "acde"),
-            // ("cool right", "crash"),
+            ("abcde", "agbdf"),
+            ("abc", "defghi"),
+            ("a", "bcd"),
+            ("abc", "e"),
+            ("", "abcdef"),
+            ("abc", "abcde"),
+            ("ace", "abcde"),
+            ("bd", "acde"),
+            ("cool right", "crash"),
             ("something cool right?", "something that should not crash"),
         ];
 
