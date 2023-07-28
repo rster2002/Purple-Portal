@@ -3,20 +3,24 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 use async_recursion::async_recursion;
+use crate::models::ws_messages::{WsClientIncoming, WsClientOutgoing};
 use crate::prelude::*;
 use crate::PurplePortalClient;
 use crate::traits::fs_adapter::FsAdapter;
+use crate::traits::ws_client::{WsClient};
 
-pub struct RecursiveReadDir<'a, T>
+pub struct RecursiveReadDir<'a, T, C>
     where T: FsAdapter,
+          C: WsClient<WsClientOutgoing, WsClientIncoming>,
 {
-    client: &'a PurplePortalClient<T>,
+    client: &'a PurplePortalClient<T, C>,
 }
 
-impl<'a, T> RecursiveReadDir<'a, T>
+impl<'a, T, C> RecursiveReadDir<'a, T, C>
     where T: FsAdapter,
+          C: WsClient<WsClientOutgoing, WsClientIncoming>,
 {
-    pub fn new(client: &'a PurplePortalClient<T>) -> Self {
+    pub fn new(client: &'a PurplePortalClient<T, C>) -> Self {
         Self {
             client,
         }

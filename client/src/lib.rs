@@ -10,14 +10,16 @@ use serde::Serialize;
 
 use crate::recursive_read_dir::RecursiveReadDir;
 use crate::models::local_state::LocalOpLog;
+use crate::models::ws_messages::{WsClientIncoming, WsClientOutgoing};
 use crate::prelude::*;
 use crate::state_manager::StateManager;
 use crate::traits::fs_adapter::FsAdapter;
+use crate::traits::ws_client::WsClient;
 
 pub mod error;
 pub(crate) mod prelude;
 mod recursive_read_dir;
-mod models;
+pub mod models;
 pub mod state_manager;
 pub(crate) mod utils;
 pub mod traits;
@@ -25,18 +27,25 @@ pub mod traits;
 #[cfg(test)]
 mod tests;
 
-pub struct PurplePortalClient<T>
+pub struct PurplePortalClient<T, C>
     where T: FsAdapter,
+        C: WsClient<WsClientOutgoing, WsClientIncoming>,
 {
     pub(crate) vault_root: PathBuf,
     pub(crate) config_root: PathBuf,
     pub(crate) fs_adapter: T,
+    pub(crate) ws_client: C,
 }
 
-impl<T> PurplePortalClient<T>
+impl<T, C> PurplePortalClient<T, C>
     where T: FsAdapter,
+        C: WsClient<WsClientOutgoing, WsClientIncoming>,
 {
-    pub async fn init(vault_root: PathBuf, fs_adapter: T) -> Result<Self> {
+    pub async fn init(
+        vault_root: PathBuf,
+        fs_adapter: T,
+        ws_client: C,
+    ) -> Result<Self> {
         let config_root = vault_root.join(".purple-portal");
 
         fs_adapter.create_dir_all(&config_root)
@@ -46,6 +55,7 @@ impl<T> PurplePortalClient<T>
             vault_root,
             config_root,
             fs_adapter,
+            ws_client,
         })
     }
 
@@ -60,7 +70,7 @@ impl<T> PurplePortalClient<T>
     pub async fn run_sync(&self) -> Result<()> {
         let state_manager = StateManager::new(self);
 
-        state_manager.diff_all()
+        let logs = state_manager.diff_all()
             .await?;
 
         Ok(())

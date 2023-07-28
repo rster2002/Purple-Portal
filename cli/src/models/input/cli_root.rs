@@ -46,4 +46,6 @@ pub enum ClientCommand {
 pub struct WatchOptions {
     /// The path of the root of the Vault to watch.
     pub path: PathBuf,
+
+    pub remote_addr: String,
 }

@@ -1,13 +1,14 @@
 mod socket_message;
+mod client_error;
 
-use rocket::form::error::Entity::Value;
 use rocket::futures::{SinkExt, StreamExt};
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio_tungstenite::{accept_async, WebSocketStream};
-use tokio_tungstenite::tungstenite::{Message, WebSocket};
-use crate::client::socket_message::ReceivedSocketMessage;
+use tokio_tungstenite::tungstenite::{Message};
+use crate::client::client_error::ClientError;
+use crate::client::socket_message::{ErrorMessage, ReceivedSocketMessage, SendSocketMessage};
 
 pub struct Client {
     id: u32,
@@ -44,35 +45,64 @@ impl Client {
 
     pub fn start(mut self) -> () {
         tokio::spawn(async move {
-            println!("{} Connected", self.id);
+            let result: Result<(), ClientError> = async {
+                println!("{} Connected", self.id);
 
-            let Some(authentication_message) = Self::next_message(&mut self.socket).await else {
-                return;
-            };
+                self.await_authentication()
+                    .await?;
 
-            dbg!(authentication_message);
+                self.send_message(SendSocketMessage::AuthenticationSuccess)
+                    .await?;
 
-            loop {
-                println!("{} Loop", self.id);
+                loop {
+                    println!("{} Loop", self.id);
 
-                tokio::select! {
-                    v = Self::next_message(&mut self.socket) => {
-                        dbg!(v);
-                    },
+                    tokio::select! {
+                        v = Self::next_message(&mut self.socket) => {
+                            let Some(message) = v else {
+                                return Ok(());
+                            };
+                        },
 
-                    v = self.receiver.recv() => {
-                        println!("{} Sending message", self.id);
-                        let Some(message) = v else {
-                            break;
-                        };
+                        v = self.receiver.recv() => {
+                            println!("{} Sending message", self.id);
+                            let Some(message) = v else {
+                                break;
+                            };
 
-                        self.socket.send(Message::Text(message)).await;
-                    },
+                            self.socket.send(Message::Text(message)).await;
+                        },
+                    }
                 }
+
+                Ok(())
+            }
+                .await;
+
+            if let Err(e) = result {
+                let _ = self.send_message(SendSocketMessage::ClientError(ErrorMessage {
+                    error: e.type_string(),
+                    message: e.to_string(),
+                }))
+                    .await;
             }
         });
+    }
 
-        // sender
+    async fn await_authentication(&mut self) -> Result<(), ClientError> {
+        let Some(authentication_message) = Self::next_message(&mut self.socket).await else {
+            return Err(ClientError::AuthenticationFailed);
+        };
+
+        let ReceivedSocketMessage::Authenticate { password } = authentication_message else {
+            return Err(ClientError::AuthenticationFailed);
+        };
+
+        if password != "abc" {
+            return Err(ClientError::AuthenticationFailed);
+        }
+
+        Ok(())
     }
 
     async fn next_message(socket: &mut WebSocketStream<TcpStream>) -> Option<ReceivedSocketMessage> {
@@ -85,5 +115,14 @@ impl Client {
         };
 
         Some(message)
+    }
+
+    async fn send_message(&mut self, message: SendSocketMessage) -> Result<(), ClientError> {
+        let message_json = serde_json::to_string(&message)?;
+
+        self.socket.send(Message::Text(message_json))
+            .await?;
+
+        Ok(())
     }
 }

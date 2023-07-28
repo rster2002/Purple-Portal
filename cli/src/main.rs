@@ -3,11 +3,14 @@ use std::path::PathBuf;
 use crate::models::input::cli_root::{ClientCommand, RootCommand, ServerCommand};
 use clap::Parser;
 use client::PurplePortalClient;
+use client::traits::ws_client::WsClient;
 use server::PurplePortalServer;
 use crate::tokio_fs_adapter::TokioFsAdapter;
+use crate::tungstenite_ws_client::TungsteniteWsClient;
 
 mod models;
 mod tokio_fs_adapter;
+mod tungstenite_ws_client;
 
 #[tokio::main]
 async fn main() {
@@ -36,8 +39,15 @@ async fn main() {
                         .join(sync_options.path);
 
                     let adapter = TokioFsAdapter;
+                    let ws_client = TungsteniteWsClient::connect(sync_options.remote_addr)
+                        .await
+                        .unwrap();
 
-                    let client = PurplePortalClient::init(vault_path, adapter)
+                    let client = PurplePortalClient::init(
+                        vault_path,
+                        adapter,
+                        ws_client,
+                    )
                         .await
                         .expect("Failed to start client");
 

@@ -10,16 +10,19 @@ use uuid::{uuid, Uuid};
 
 use crate::recursive_read_dir::RecursiveReadDir;
 use crate::models::local_state::LocalOpLog;
+use crate::models::ws_messages::{WsClientIncoming, WsClientOutgoing};
 use crate::prelude::*;
 use crate::PurplePortalClient;
 use crate::traits::fs_adapter::FsAdapter;
+use crate::traits::ws_client::WsClient;
 use crate::utils::diff::Diff;
 
 /// Responsible for updating the local op logs.
-pub struct StateManager<'a, T>
+pub struct StateManager<'a, T, C>
     where T: FsAdapter,
+          C: WsClient<WsClientOutgoing, WsClientIncoming>,
 {
-    client: &'a PurplePortalClient<T>,
+    client: &'a PurplePortalClient<T, C>,
 }
 
 #[derive(Debug, Error)]
@@ -28,10 +31,11 @@ pub enum StateError {
     DivergentContent,
 }
 
-impl<'a, T> StateManager<'a, T>
-    where T: FsAdapter
+impl<'a, T, C> StateManager<'a, T, C>
+    where T: FsAdapter,
+          C: WsClient<WsClientOutgoing, WsClientIncoming>,
 {
-    pub fn new(client: &'a PurplePortalClient<T>) -> Self {
+    pub fn new(client: &'a PurplePortalClient<T, C>) -> Self {
         Self {
             client,
         }
@@ -43,7 +47,7 @@ impl<'a, T> StateManager<'a, T>
             .join("bin")
     }
 
-    pub async fn diff_all(&self) -> Result<()> {
+    pub async fn diff_all(&self) -> Result<Vec<LocalOpLog>> {
         let reader = RecursiveReadDir::new(self.client);
         let paths = reader.walk(&self.client.vault_root)
             .await?
@@ -52,15 +56,19 @@ impl<'a, T> StateManager<'a, T>
                 p.to_str().unwrap().ends_with(".md")
             });
 
+        let mut logs = vec![];
+
         for path in paths {
-            let _ = self.diff_path(&path)
+            let local_op_log = self.diff_path(&path)
                 .await?;
+
+            logs.push(local_op_log);
         }
 
-        Ok(())
+        Ok(logs)
     }
 
-    pub async fn diff_path(&self, abs_path: &PathBuf) -> Result<()> {
+    pub async fn diff_path(&self, abs_path: &PathBuf) -> Result<LocalOpLog> {
         let relative_path = abs_path.strip_prefix(&self.client.vault_root)
             .unwrap()
             .to_path_buf();
@@ -95,15 +103,19 @@ impl<'a, T> StateManager<'a, T>
                 )
                 .await?;
 
-            let encoded = bincode::serialize(&LocalOpLog {
+            let local_op_log = LocalOpLog {
                 agent_id,
                 last_sync: None,
                 op_log: log.encode(EncodeOptions::default()),
-            })?;
+            };
+
+            let encoded = bincode::serialize(&local_op_log)?;
 
             self.client.fs_adapter
                 .write_file(&diff_path, &encoded)
                 .await?;
+
+            return Ok(local_op_log);
         } else {
             let file_content = self.client.fs_adapter
                 .read_file(&diff_path)
@@ -135,9 +147,9 @@ impl<'a, T> StateManager<'a, T>
             self.client.fs_adapter
                 .write_file(&diff_path, &bincode::serialize(&new_local)?)
                 .await?;
-        }
 
-        Ok(())
+            return Ok(new_local);
+        }
     }
 
     fn apply_to_op_log(op_log: &mut OpLog, agent: AgentId, content: String) -> Result<()> {
@@ -190,7 +202,7 @@ mod tests {
     use diamond_types::list::encoding::EncodeOptions;
     use diamond_types::list::OpLog;
     use crate::state_manager::StateManager;
-    use crate::tests::TestFsAdapter;
+    use crate::tests::{TestFsAdapter, TestWsClient};
 
     #[test]
     fn diffs_are_applied_correctly() {
@@ -222,7 +234,7 @@ mod tests {
 
             let agent = op_log.get_or_create_agent_id("abc");
 
-            let result = StateManager::<TestFsAdapter>::apply_to_op_log(&mut op_log, agent, case.1.to_string());
+            let result = StateManager::<TestFsAdapter, TestWsClient>::apply_to_op_log(&mut op_log, agent, case.1.to_string());
             assert!(result.is_ok());
         }
     }

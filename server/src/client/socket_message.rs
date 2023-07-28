@@ -1,3 +1,4 @@
+use diamond_types::LocalVersion;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
@@ -6,6 +7,11 @@ pub enum ReceivedSocketMessage {
     Authenticate {
         password: String,
     },
+
+    Sync {
+        last_sync: LocalVersion,
+        op_log: Vec<u8>,
+    },
 }
 
 #[derive(Debug, Serialize)]
@@ -13,4 +19,14 @@ pub enum ReceivedSocketMessage {
 pub enum SendSocketMessage {
     AuthenticationFailed,
     AuthenticationSuccess,
+
+    #[serde(rename = "error")]
+    ClientError(ErrorMessage),
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ErrorMessage {
+    pub error: String,
+    pub message: String,
 }
