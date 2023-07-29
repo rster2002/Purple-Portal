@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", content = "payload", rename_all = "camelCase")]
-pub enum ReceivedSocketMessage {
+pub enum IncomingSocketMessage {
     Authenticate {
         password: String,
     },
@@ -16,7 +16,7 @@ pub enum ReceivedSocketMessage {
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", content = "payload", rename_all = "camelCase")]
-pub enum SendSocketMessage {
+pub enum OutgoingSocketMessage {
     AuthenticationFailed,
     AuthenticationSuccess,
 

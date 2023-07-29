@@ -39,9 +39,14 @@ async fn main() {
                         .join(sync_options.path);
 
                     let adapter = TokioFsAdapter;
+
+                    dbg!("here");
+
                     let ws_client = TungsteniteWsClient::connect(sync_options.remote_addr)
                         .await
                         .unwrap();
+
+                    dbg!("here");
 
                     let client = PurplePortalClient::init(
                         vault_path,

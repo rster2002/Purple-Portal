@@ -44,12 +44,23 @@ impl<T, C> PurplePortalClient<T, C>
     pub async fn init(
         vault_root: PathBuf,
         fs_adapter: T,
-        ws_client: C,
+        mut ws_client: C,
     ) -> Result<Self> {
         let config_root = vault_root.join(".purple-portal");
 
         fs_adapter.create_dir_all(&config_root)
             .await?;
+
+        ws_client.send(WsClientOutgoing::Authenticate {
+            password: "abc".to_string(),
+        })
+            .await?;
+
+        let received = ws_client.receive().await?;
+
+        let WsClientIncoming::AuthenticationSuccess = received else {
+            return Err(Error::SocketAuthenticationFailed);
+        };
 
         Ok(Self {
             vault_root,

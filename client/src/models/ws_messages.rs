@@ -1,7 +1,16 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
-pub enum WsClientIncoming {}
+#[serde(tag = "type", content = "payload", rename_all = "camelCase")]
+pub enum WsClientIncoming {
+    AuthenticationFailed,
+    AuthenticationSuccess,
+}
 
 #[derive(Debug, Serialize)]
-pub enum WsClientOutgoing {}
+#[serde(tag = "type", content = "payload", rename_all = "camelCase")]
+pub enum WsClientOutgoing {
+    Authenticate {
+        password: String,
+    },
+}

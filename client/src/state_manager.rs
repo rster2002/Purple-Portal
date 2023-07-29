@@ -79,7 +79,7 @@ impl<'a, T, C> StateManager<'a, T, C>
         let diff_path = self.diff_root_path()
             .join(bin_path);
 
-        if !diff_path.exists() {
+        return if !diff_path.exists() {
             let mut log = OpLog::new();
             let agent_id = Uuid::new_v4().to_string();
             let agent = log.get_or_create_agent_id(&*agent_id);
@@ -90,7 +90,7 @@ impl<'a, T, C> StateManager<'a, T, C>
                     .await?
             )?;
 
-            if current_content.is_empty() {
+            if !current_content.is_empty() {
                 let _ = log.add_insert(agent, 0, &*current_content);
             }
 
@@ -115,7 +115,7 @@ impl<'a, T, C> StateManager<'a, T, C>
                 .write_file(&diff_path, &encoded)
                 .await?;
 
-            return Ok(local_op_log);
+            Ok(local_op_log)
         } else {
             let file_content = self.client.fs_adapter
                 .read_file(&diff_path)
@@ -148,7 +148,7 @@ impl<'a, T, C> StateManager<'a, T, C>
                 .write_file(&diff_path, &bincode::serialize(&new_local)?)
                 .await?;
 
-            return Ok(new_local);
+            Ok(new_local)
         }
     }
 

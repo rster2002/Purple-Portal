@@ -8,7 +8,7 @@ use tokio::sync::mpsc::{Receiver, Sender};
 use tokio_tungstenite::{accept_async, WebSocketStream};
 use tokio_tungstenite::tungstenite::{Message};
 use crate::client::client_error::ClientError;
-use crate::client::socket_message::{ErrorMessage, ReceivedSocketMessage, SendSocketMessage};
+use crate::client::socket_message::{ErrorMessage, IncomingSocketMessage, OutgoingSocketMessage};
 
 pub struct Client {
     id: u32,
@@ -51,7 +51,7 @@ impl Client {
                 self.await_authentication()
                     .await?;
 
-                self.send_message(SendSocketMessage::AuthenticationSuccess)
+                self.send_message(OutgoingSocketMessage::AuthenticationSuccess)
                     .await?;
 
                 loop {
@@ -80,7 +80,7 @@ impl Client {
                 .await;
 
             if let Err(e) = result {
-                let _ = self.send_message(SendSocketMessage::ClientError(ErrorMessage {
+                let _ = self.send_message(OutgoingSocketMessage::ClientError(ErrorMessage {
                     error: e.type_string(),
                     message: e.to_string(),
                 }))
@@ -94,7 +94,7 @@ impl Client {
             return Err(ClientError::AuthenticationFailed);
         };
 
-        let ReceivedSocketMessage::Authenticate { password } = authentication_message else {
+        let IncomingSocketMessage::Authenticate { password } = authentication_message else {
             return Err(ClientError::AuthenticationFailed);
         };
 
@@ -105,19 +105,19 @@ impl Client {
         Ok(())
     }
 
-    async fn next_message(socket: &mut WebSocketStream<TcpStream>) -> Option<ReceivedSocketMessage> {
+    async fn next_message(socket: &mut WebSocketStream<TcpStream>) -> Option<IncomingSocketMessage> {
         let Some(Ok(Message::Text(string))) = socket.next().await else {
             return None;
         };
 
-        let Ok(message) = serde_json::from_str::<ReceivedSocketMessage>(&*string) else {
+        let Ok(message) = serde_json::from_str::<IncomingSocketMessage>(&*string) else {
             return None;
         };
 
         Some(message)
     }
 
-    async fn send_message(&mut self, message: SendSocketMessage) -> Result<(), ClientError> {
+    async fn send_message(&mut self, message: OutgoingSocketMessage) -> Result<(), ClientError> {
         let message_json = serde_json::to_string(&message)?;
 
         self.socket.send(Message::Text(message_json))

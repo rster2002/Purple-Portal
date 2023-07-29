@@ -65,6 +65,8 @@ impl PurplePortalServer {
                 .await
                 .expect("Failed to start server");
 
+            dbg!("Incoming connection");
+
             let id = rnd.next_u32();
             let client = Client::accept(
                 id,
@@ -100,6 +102,7 @@ impl PurplePortalServer {
             });
 
             self.senders.write().await.push((id, sender));
+            dbg!("Connected");
         }
     }
 }

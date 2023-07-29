@@ -6,6 +6,7 @@ use tokio_tungstenite::connect_async;
 use client::models::ws_messages::{WsClientIncoming, WsClientOutgoing};
 use client::traits::ws_client::{WsClient, WsClientError};
 use futures_util::stream::StreamExt;
+use tokio_tungstenite::tungstenite::connect;
 
 pub struct TungsteniteWsClient {
     sender: Sender<WsClientOutgoing>,
@@ -20,8 +21,12 @@ impl WsClient<WsClientOutgoing, WsClientIncoming> for TungsteniteWsClient {
         let incoming = mpsc::channel::<WsClientIncoming>(64);
         let outgoing = mpsc::channel::<WsClientOutgoing>(64);
 
+        dbg!("here");
+
         let (mut stream, _) = connect_async(addr)
             .await?;
+
+        dbg!("here");
 
         tokio::spawn(async move {
             loop {
