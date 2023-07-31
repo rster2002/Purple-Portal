@@ -1,10 +1,9 @@
+use std::path::PathBuf;
 use diamond_types::LocalVersion;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct LocalOpLog {
+pub struct RemoteOpLog {
     pub agent_id: String,
     pub path: PathBuf,
     pub last_sync: Option<LocalVersion>,

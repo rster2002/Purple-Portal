@@ -22,6 +22,7 @@ pub(crate) mod utils;
 
 #[cfg(test)]
 mod tests;
+mod shared;
 
 pub struct PurplePortalClient<T, C>
 where
@@ -74,10 +75,33 @@ where
             .to_string()
     }
 
-    pub async fn run_sync(&self) -> Result<()> {
+    pub async fn run_sync(&mut self) -> Result<()> {
         let state_manager = StateManager::new(self);
 
-        let logs = state_manager.diff_all().await?;
+        let changed_logs = state_manager.diff_all()
+            .await?;
+
+        for log in changed_logs {
+            wrap_ws_error!(
+                self.ws_client.send(WsClientOutgoing::Sync(log))
+                    .await
+            );
+        }
+
+        Ok(())
+    }
+
+    pub async fn sync_all(&mut self) -> Result<()> {
+        let state_manager = StateManager::new(self);
+        let changed_logs = state_manager.get_all_local()
+            .await?;
+
+        for log in changed_logs {
+            wrap_ws_error!(
+                self.ws_client.send(WsClientOutgoing::Sync(log))
+                    .await
+            );
+        }
 
         Ok(())
     }

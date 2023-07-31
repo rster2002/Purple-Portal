@@ -1,5 +1,5 @@
-use diamond_types::LocalVersion;
 use serde::{Deserialize, Serialize};
+use crate::models::remote_op_log::RemoteOpLog;
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", content = "payload", rename_all = "camelCase")]
@@ -8,10 +8,7 @@ pub enum IncomingSocketMessage {
         password: String,
     },
 
-    Sync {
-        last_sync: LocalVersion,
-        op_log: Vec<u8>,
-    },
+    Sync(RemoteOpLog),
 }
 
 #[derive(Debug, Serialize)]

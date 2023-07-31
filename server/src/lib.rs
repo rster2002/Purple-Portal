@@ -3,6 +3,7 @@ extern crate rocket;
 
 mod client;
 pub mod modules;
+mod models;
 
 use crate::client::Client;
 use modules::cors;

@@ -44,11 +44,11 @@ async fn main() {
 
                 dbg!("here");
 
-                let client = PurplePortalClient::init(vault_path, adapter, ws_client)
+                let mut client = PurplePortalClient::init(vault_path, adapter, ws_client)
                     .await
                     .expect("Failed to start client");
 
-                let result = client.run_sync().await;
+                let result = client.sync_all().await;
 
                 dbg!(result);
             }

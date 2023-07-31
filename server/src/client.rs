@@ -55,6 +55,8 @@ impl Client {
                             let Some(message) = v else {
                                 return Ok(());
                             };
+
+                            dbg!(message);
                         },
 
                         v = self.receiver.recv() => {
@@ -102,7 +104,10 @@ impl Client {
     async fn next_message(
         socket: &mut WebSocketStream<TcpStream>,
     ) -> Option<IncomingSocketMessage> {
-        let Some(Ok(Message::Text(string))) = socket.next().await else {
+        let option = socket.next().await;
+
+        dbg!(&option);
+        let Some(Ok(Message::Text(string))) = option else {
             return None;
         };
 

@@ -32,6 +32,11 @@ pub enum StateError {
     DivergentContent,
 }
 
+pub enum DiffResult {
+    Unchanged,
+    Changed(LocalOpLog),
+}
+
 impl<'a, T, C> StateManager<'a, T, C>
 where
     T: FsAdapter,
@@ -41,10 +46,32 @@ where
         Self { client }
     }
 
+    /// Returns the path where all local diff files are placed.
     fn diff_root_path(&self) -> PathBuf {
         self.client.config_root.join("bin")
     }
 
+    pub async fn get_all_local(&self) -> Result<Vec<LocalOpLog>> {
+        let reader = RecursiveReadDir::new(self.client);
+        let paths = reader.walk(&self.diff_root_path())
+            .await?
+            .into_iter()
+            .filter(|p| p.to_str().unwrap().ends_with(".bin"));
+
+        let mut logs = vec![];
+
+        for path in paths {
+            let content = self.client.fs_adapter
+                .read_file(&path)
+                .await?;
+
+            logs.push(bincode::deserialize(&content)?);
+        }
+
+        Ok(logs)
+    }
+
+    /// Diffs all files in the obsidian vault and returns the ones that have changed.
     pub async fn diff_all(&self) -> Result<Vec<LocalOpLog>> {
         let reader = RecursiveReadDir::new(self.client);
         let paths = reader
@@ -56,15 +83,17 @@ where
         let mut logs = vec![];
 
         for path in paths {
-            let local_op_log = self.diff_path(&path).await?;
+            let diff_result = self.diff_path(&path).await?;
 
-            logs.push(local_op_log);
+            if let DiffResult::Changed(op_log) = diff_result {
+                logs.push(op_log);
+            }
         }
 
         Ok(logs)
     }
 
-    pub async fn diff_path(&self, abs_path: &PathBuf) -> Result<LocalOpLog> {
+    pub async fn diff_path(&self, abs_path: &PathBuf) -> Result<DiffResult> {
         let relative_path = abs_path
             .strip_prefix(&self.client.vault_root)
             .unwrap()
@@ -99,6 +128,7 @@ where
 
             let local_op_log = LocalOpLog {
                 agent_id,
+                path: abs_path.to_path_buf(),
                 last_sync: None,
                 op_log: log.encode(EncodeOptions::default()),
             };
@@ -110,7 +140,7 @@ where
                 .write_file(&diff_path, &encoded)
                 .await?;
 
-            Ok(local_op_log)
+            Ok(DiffResult::Changed(local_op_log))
         } else {
             let file_content = self.client.fs_adapter.read_file(&diff_path).await?;
 
@@ -122,10 +152,17 @@ where
             let current_content =
                 String::from_utf8(self.client.fs_adapter.read_file(abs_path).await?)?;
 
+            let op_log_content = Branch::new_at_tip(&op_log).content().to_string();
+
+            if op_log_content == current_content {
+                return Ok(DiffResult::Unchanged);
+            }
+
             Self::apply_to_op_log(&mut op_log, agent, current_content)?;
 
             let new_local = LocalOpLog {
                 agent_id: local_log.agent_id,
+                path: abs_path.to_path_buf(),
                 last_sync: local_log.last_sync,
                 op_log: op_log.encode(EncodeOptions::default()),
             };
@@ -135,7 +172,7 @@ where
                 .write_file(&diff_path, &bincode::serialize(&new_local)?)
                 .await?;
 
-            Ok(new_local)
+            Ok(DiffResult::Changed(new_local))
         };
     }
 
