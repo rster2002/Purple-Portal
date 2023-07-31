@@ -10,6 +10,7 @@ pub enum WsClientIncoming {
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", content = "payload", rename_all = "camelCase")]
 pub enum WsClientOutgoing {
+    UnprocessableContent,
     Authenticate {
         password: String,
     },

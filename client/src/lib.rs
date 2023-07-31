@@ -49,14 +49,18 @@ impl<T, C> PurplePortalClient<T, C>
         let config_root = vault_root.join(".purple-portal");
 
         fs_adapter.create_dir_all(&config_root)
-            .await?;
+            .await
+            .unwrap();
 
         ws_client.send(WsClientOutgoing::Authenticate {
             password: "abc".to_string(),
         })
-            .await?;
+            .await
+            .unwrap();
 
-        let received = ws_client.receive().await?;
+        let received = ws_client.receive()
+            .await
+            .unwrap();
 
         let WsClientIncoming::AuthenticationSuccess = received else {
             return Err(Error::SocketAuthenticationFailed);

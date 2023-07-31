@@ -14,3 +14,4 @@ tokio = { version = "1.27.0", features = ["rt"] }
 async-trait = "0.1.71"
 tokio-tungstenite = "0.19.0"
 futures-util = "0.3.28"
+serde_json = "1.0.104"
