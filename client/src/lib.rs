@@ -43,16 +43,15 @@ where
     pub async fn init(vault_root: PathBuf, fs_adapter: T, mut ws_client: C) -> Result<Self> {
         let config_root = vault_root.join(".purple-portal");
 
-        fs_adapter.create_dir_all(&config_root).await.unwrap();
+        wrap_ws_error!(fs_adapter.create_dir_all(&config_root).await)?;
 
-        ws_client
+        wrap_ws_error!(ws_client
             .send(WsClientOutgoing::Authenticate {
                 password: "abc".to_string(),
             })
-            .await
-            .unwrap();
+            .await)?;
 
-        let received = ws_client.receive().await.unwrap();
+        let received = wrap_ws_error!(ws_client.receive().await)?;
 
         let WsClientIncoming::AuthenticationSuccess = received else {
             return Err(Error::SocketAuthenticationFailed);
@@ -100,7 +99,7 @@ where
             wrap_ws_error!(
                 self.ws_client.send(WsClientOutgoing::Sync(log))
                     .await
-            );
+            )?;
         }
 
         Ok(())
