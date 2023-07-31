@@ -1,10 +1,12 @@
 use std::error::Error;
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::{Debug, Display};
 use std::path::PathBuf;
+
+use async_trait::async_trait;
 
 pub trait FsAdapterError: Error {}
 
-#[async_trait::async_trait]
+#[async_trait]
 pub trait FsAdapter: Sync + Send {
     type Err: FsAdapterError;
 

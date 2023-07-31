@@ -22,8 +22,7 @@ impl FsAdapter for TokioFsAdapter {
     }
 
     async fn read_dir(&self, path: &PathBuf) -> Result<Vec<PathBuf>, Self::Err> {
-        let mut dir = tokio::fs::read_dir(path)
-            .await?;
+        let mut dir = tokio::fs::read_dir(path).await?;
 
         let mut result = vec![];
 
@@ -35,8 +34,7 @@ impl FsAdapter for TokioFsAdapter {
     }
 
     async fn create_dir_all(&self, path: &PathBuf) -> Result<(), Self::Err> {
-        tokio::fs::create_dir_all(path)
-            .await?;
+        tokio::fs::create_dir_all(path).await?;
 
         Ok(())
     }

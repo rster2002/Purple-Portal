@@ -1,14 +1,14 @@
-mod socket_message;
 mod client_error;
+mod socket_message;
 
+use crate::client::client_error::ClientError;
+use crate::client::socket_message::{ErrorMessage, IncomingSocketMessage, OutgoingSocketMessage};
 use rocket::futures::{SinkExt, StreamExt};
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
+use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{accept_async, WebSocketStream};
-use tokio_tungstenite::tungstenite::{Message};
-use crate::client::client_error::ClientError;
-use crate::client::socket_message::{ErrorMessage, IncomingSocketMessage, OutgoingSocketMessage};
 
 pub struct Client {
     id: u32,
@@ -19,16 +19,10 @@ pub struct Client {
 }
 
 impl Client {
-    pub async fn accept(
-        id: u32,
-        stream: TcpStream,
-        broadcast: Sender<String>,
-    ) -> Result<Self, ()> {
+    pub async fn accept(id: u32, stream: TcpStream, broadcast: Sender<String>) -> Result<Self, ()> {
         let (sender, receiver) = mpsc::channel::<String>(100);
 
-        let socket = accept_async(stream)
-            .await
-            .unwrap();
+        let socket = accept_async(stream).await.unwrap();
 
         Ok(Self {
             id,
@@ -48,8 +42,7 @@ impl Client {
             let result: Result<(), ClientError> = async {
                 println!("{} Connected", self.id);
 
-                self.await_authentication()
-                    .await?;
+                self.await_authentication().await?;
 
                 self.send_message(OutgoingSocketMessage::AuthenticationSuccess)
                     .await?;
@@ -77,13 +70,14 @@ impl Client {
 
                 Ok(())
             }
-                .await;
+            .await;
 
             if let Err(e) = result {
-                let _ = self.send_message(OutgoingSocketMessage::ClientError(ErrorMessage {
-                    error: e.type_string(),
-                    message: e.to_string(),
-                }))
+                let _ = self
+                    .send_message(OutgoingSocketMessage::ClientError(ErrorMessage {
+                        error: e.type_string(),
+                        message: e.to_string(),
+                    }))
                     .await;
             }
         });
@@ -105,7 +99,9 @@ impl Client {
         Ok(())
     }
 
-    async fn next_message(socket: &mut WebSocketStream<TcpStream>) -> Option<IncomingSocketMessage> {
+    async fn next_message(
+        socket: &mut WebSocketStream<TcpStream>,
+    ) -> Option<IncomingSocketMessage> {
         let Some(Ok(Message::Text(string))) = socket.next().await else {
             return None;
         };
@@ -120,8 +116,7 @@ impl Client {
     async fn send_message(&mut self, message: OutgoingSocketMessage) -> Result<(), ClientError> {
         let message_json = serde_json::to_string(&message)?;
 
-        self.socket.send(Message::Text(message_json))
-            .await?;
+        self.socket.send(Message::Text(message_json)).await?;
 
         Ok(())
     }

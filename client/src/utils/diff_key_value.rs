@@ -13,9 +13,9 @@ pub fn diff_key_value<'a, K, V>(
     iter_old: impl Iterator<Item = &'a (K, V)>,
     iter_new: impl Iterator<Item = &'a (K, V)>,
 ) -> KeyValueDiff<'a, K, V>
-    where
-        K: Hash + Eq,
-        V: Eq,
+where
+    K: Hash + Eq,
+    V: Eq,
 {
     todo!()
     // let old_keys: Vec<&K> = iter_old.iter().map(|i| i.0).collect();
@@ -66,22 +66,11 @@ mod tests {
     #[test]
     #[ignore]
     fn new_entries_are_correctly_found() {
-        let entries_a: [(&str, u32); 2] = [
-            ("a", 10),
-            ("b", 10),
-        ];
+        let entries_a: [(&str, u32); 2] = [("a", 10), ("b", 10)];
 
-        let entries_b: [(&str, u32); 4] = [
-            ("a", 10),
-            ("b", 20),
-            ("c", 30),
-            ("d", 40),
-        ];
+        let entries_b: [(&str, u32); 4] = [("a", 10), ("b", 20), ("c", 30), ("d", 40)];
 
         let diff = diff_key_value::<&str, u32>(entries_a.iter(), entries_b.iter());
-        assert_eq!(diff.added, vec![
-            &("c", 30_u32),
-            &("d", 40_u32),
-        ]);
+        assert_eq!(diff.added, vec![&("c", 30_u32), &("d", 40_u32),]);
     }
 }

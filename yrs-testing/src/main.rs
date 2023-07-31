@@ -1,8 +1,8 @@
-use std::fs;
-use std::path::PathBuf;
-use diamond_types::AgentId;
 use diamond_types::list::encoding::EncodeOptions;
 use diamond_types::list::{Branch, OpLog};
+use diamond_types::AgentId;
+use std::fs;
+use std::path::PathBuf;
 
 fn main() {
     let mut server = ServerFile::new("test");
@@ -40,9 +40,7 @@ struct ServerFile {
 }
 
 impl ServerFile {
-    pub fn new(
-        name: impl Into<String>,
-    ) -> Self {
+    pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
             op_log: OpLog::new(),
@@ -54,7 +52,9 @@ impl ServerFile {
     }
 
     pub fn use_remote_content(&mut self, content: &Vec<u8>) {
-        self.op_log.decode_and_add(content).expect("TODO: panic message");
+        self.op_log
+            .decode_and_add(content)
+            .expect("TODO: panic message");
     }
 }
 
@@ -65,10 +65,7 @@ struct ClientFile {
 }
 
 impl ClientFile {
-    pub fn new(
-        agent_id: &str,
-        name: impl Into<String>
-    ) -> Self {
+    pub fn new(agent_id: &str, name: impl Into<String>) -> Self {
         let mut op_log = OpLog::new();
         let agent = op_log.get_or_create_agent_id(agent_id);
 
@@ -88,7 +85,9 @@ impl ClientFile {
     }
 
     pub fn use_remote_content(&mut self, content: &Vec<u8>) {
-        self.op_log.decode_and_add(content).expect("TODO: panic message");
+        self.op_log
+            .decode_and_add(content)
+            .expect("TODO: panic message");
     }
 
     pub fn get_content(&self) -> String {

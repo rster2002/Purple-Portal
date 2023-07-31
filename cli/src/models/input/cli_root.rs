@@ -1,5 +1,5 @@
+use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
-use clap::{Subcommand, Args, Parser};
 
 #[derive(Debug, Parser)]
 pub enum RootCommand {
@@ -9,7 +9,7 @@ pub enum RootCommand {
 
     /// Commands related to interacting with a server.
     #[clap(subcommand)]
-    Client(ClientCommand)
+    Client(ClientCommand),
 }
 
 #[derive(Debug, Subcommand)]
@@ -29,9 +29,7 @@ pub struct ServerStartOptions {
 }
 
 #[derive(Debug, Args)]
-pub struct ServerRemoveOptions {
-
-}
+pub struct ServerRemoveOptions {}
 
 #[derive(Debug, Subcommand)]
 pub enum ClientCommand {

@@ -9,14 +9,15 @@ pub enum ClientError {
     Tungstenite(#[from] tokio_tungstenite::tungstenite::Error),
 
     #[error("{0}")]
-    JsonError(#[from] serde_json::Error)
+    JsonError(#[from] serde_json::Error),
 }
 
 impl ClientError {
     pub fn type_string(&self) -> String {
         match self {
             ClientError::AuthenticationFailed => "authenticationFailed",
-            _ => "internal"
-        }.to_string()
+            _ => "internal",
+        }
+        .to_string()
     }
 }

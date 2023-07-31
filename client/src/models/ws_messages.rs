@@ -11,7 +11,5 @@ pub enum WsClientIncoming {
 #[serde(tag = "type", content = "payload", rename_all = "camelCase")]
 pub enum WsClientOutgoing {
     UnprocessableContent,
-    Authenticate {
-        password: String,
-    },
+    Authenticate { password: String },
 }

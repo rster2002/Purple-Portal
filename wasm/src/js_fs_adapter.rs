@@ -1,8 +1,8 @@
+use client::traits::fs_adapter::{FsAdapter, FsAdapterError};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 use wasm_bindgen::prelude::*;
-use client::traits::fs_adapter::{FsAdapter, FsAdapterError};
 
 pub struct JsFsAdapter;
 

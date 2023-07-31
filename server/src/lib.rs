@@ -1,20 +1,20 @@
 #[macro_use]
 extern crate rocket;
 
-pub mod modules;
 mod client;
+pub mod modules;
 
+use crate::client::Client;
+use modules::cors;
+use rand::{thread_rng, RngCore};
+use rocket::futures::{SinkExt, StreamExt};
 use std::path::PathBuf;
 use std::sync::Arc;
-use rand::{RngCore, thread_rng};
-use rocket::futures::{SinkExt, StreamExt};
 use tokio::net::TcpListener;
-use tokio::sync::{mpsc, Mutex, oneshot, RwLock};
 use tokio::sync::mpsc::Sender;
+use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 use tokio_tungstenite::accept_async;
 use tokio_tungstenite::tungstenite::Message;
-use modules::cors;
-use crate::client::Client;
 
 pub struct PurplePortalServer {
     senders: Arc<RwLock<Vec<(u32, Sender<String>)>>>,
@@ -28,9 +28,7 @@ impl PurplePortalServer {
     }
 
     pub async fn start(&mut self) {
-        let server = TcpListener::bind("127.0.0.1:9001")
-            .await
-            .unwrap();
+        let server = TcpListener::bind("127.0.0.1:9001").await.unwrap();
 
         let (broadcast, mut rx) = mpsc::channel::<String>(100);
 
@@ -46,8 +44,7 @@ impl PurplePortalServer {
                 let guard = internal_arc.read().await;
                 for (id, sender) in guard.iter() {
                     println!("Message to {}", id);
-                    let result = sender.send(message.to_string())
-                        .await;
+                    let result = sender.send(message.to_string()).await;
 
                     if let Err(e) = result {
                         if !sender.is_closed() {
@@ -61,20 +58,12 @@ impl PurplePortalServer {
         let mut rnd = thread_rng();
 
         loop {
-            let (stream, _) =  server.accept()
-                .await
-                .expect("Failed to start server");
+            let (stream, _) = server.accept().await.expect("Failed to start server");
 
             dbg!("Incoming connection");
 
             let id = rnd.next_u32();
-            let client = Client::accept(
-                id,
-                stream,
-                broadcast.clone()
-            )
-                .await
-                .unwrap();
+            let client = Client::accept(id, stream, broadcast.clone()).await.unwrap();
 
             let sender = client.get_new_sender();
             client.start();
@@ -87,7 +76,8 @@ impl PurplePortalServer {
                 // Find the index for the sender. Scoped to make sure the read lock is used as short
                 // as possible.
                 let mut index_result = {
-                    local_senders_vec.read()
+                    local_senders_vec
+                        .read()
                         .await
                         .iter()
                         .enumerate()

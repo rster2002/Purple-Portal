@@ -1,8 +1,8 @@
-use std::error::Error;
-use std::fmt::{Display, Formatter};
 use async_trait::async_trait;
 use client::models::ws_messages::{WsClientIncoming, WsClientOutgoing};
 use client::traits::ws_client::{WsClient, WsClientError};
+use std::error::Error;
+use std::fmt::{Display, Formatter};
 
 pub struct JsWsClient;
 

@@ -1,10 +1,11 @@
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::{Debug, Display};
 use std::string::FromUtf8Error;
+
 use diamond_types::list::encoding::encode_tools::ParseError;
 use thiserror::Error;
+
 use crate::state_manager::StateError;
-use crate::traits::fs_adapter::{FsAdapter, FsAdapterError};
-use crate::traits::ws_client::WsClientError;
+use crate::traits::fs_adapter::FsAdapterError;
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -34,7 +35,8 @@ pub enum Error {
 }
 
 impl<T> From<T> for Error
-    where T: FsAdapterError,
+where
+    T: FsAdapterError,
 {
     fn from(value: T) -> Self {
         Error::FsAdapterError(value.to_string())

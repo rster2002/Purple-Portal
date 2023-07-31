@@ -1,12 +1,12 @@
 use async_trait::async_trait;
+use client::models::ws_messages::{WsClientIncoming, WsClientOutgoing};
+use client::traits::ws_client::{WsClient, WsClientError};
+use futures_util::stream::StreamExt;
 use futures_util::SinkExt;
 use thiserror::Error;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio_tungstenite::connect_async;
-use client::models::ws_messages::{WsClientIncoming, WsClientOutgoing};
-use client::traits::ws_client::{WsClient, WsClientError};
-use futures_util::stream::StreamExt;
 use tokio_tungstenite::tungstenite::{connect, Message};
 
 pub struct TungsteniteWsClient {
@@ -42,14 +42,7 @@ impl WsClient<WsClientOutgoing, WsClientIncoming> for TungsteniteWsClient {
         let (incoming_sender, incoming_receiver) = mpsc::channel::<WsClientIncoming>(64);
         let (outgoing_sender, mut outgoing_receiver) = mpsc::channel::<WsClientOutgoing>(64);
 
-        dbg!("here");
-
-        let (mut stream, _) = connect_async(addr)
-            .await?;
-
-        dbg!("here");
-
-        // let i = outgoing_receiver.recv().await;
+        let (mut stream, _) = connect_async(addr).await?;
 
         let local_outgoing_sender = outgoing_sender.clone();
         tokio::spawn(async move {
@@ -111,7 +104,8 @@ impl WsClient<WsClientOutgoing, WsClientIncoming> for TungsteniteWsClient {
     }
 
     async fn receive(&mut self) -> Result<WsClientIncoming, Self::Err> {
-        self.incoming.recv()
+        self.incoming
+            .recv()
             .await
             .ok_or(TungsteniteWsError::IncomingChannelEnded)
     }
