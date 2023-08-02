@@ -1,5 +1,6 @@
 mod client_error;
 mod socket_message;
+mod handle_incoming_message;
 
 use crate::client::client_error::ClientError;
 use crate::client::socket_message::{ErrorMessage, IncomingSocketMessage, OutgoingSocketMessage};
@@ -9,18 +10,19 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{accept_async, WebSocketStream};
+use crate::models::client_info::ClientInfo;
 
 pub struct Client {
     id: u32,
     socket: WebSocketStream<TcpStream>,
-    broadcast: Sender<String>,
-    sender: Sender<String>,
-    receiver: Receiver<String>,
+    broadcast: Sender<IncomingSocketMessage>,
+    sender: Sender<OutgoingSocketMessage>,
+    receiver: Receiver<OutgoingSocketMessage>,
 }
 
 impl Client {
-    pub async fn accept(id: u32, stream: TcpStream, broadcast: Sender<String>) -> Result<Self, ()> {
-        let (sender, receiver) = mpsc::channel::<String>(100);
+    pub async fn accept(id: u32, stream: TcpStream, broadcast: Sender<IncomingSocketMessage>) -> Result<Self, ()> {
+        let (sender, receiver) = mpsc::channel::<OutgoingSocketMessage>(100);
 
         let socket = accept_async(stream).await.unwrap();
 
@@ -33,7 +35,7 @@ impl Client {
         })
     }
 
-    pub fn get_new_sender(&self) -> Sender<String> {
+    pub fn get_new_sender(&self) -> Sender<OutgoingSocketMessage> {
         self.sender.clone()
     }
 
@@ -42,7 +44,8 @@ impl Client {
             let result: Result<(), ClientError> = async {
                 println!("{} Connected", self.id);
 
-                self.await_authentication().await?;
+                let client_info = self.await_authentication()
+                    .await?;
 
                 self.send_message(OutgoingSocketMessage::AuthenticationSuccess)
                     .await?;
@@ -56,7 +59,7 @@ impl Client {
                                 return Ok(());
                             };
 
-                            dbg!(message);
+                            self.handle_incoming_message(&client_info, message).await?;
                         },
 
                         v = self.receiver.recv() => {
@@ -85,12 +88,12 @@ impl Client {
         });
     }
 
-    async fn await_authentication(&mut self) -> Result<(), ClientError> {
+    async fn await_authentication(&mut self) -> Result<ClientInfo, ClientError> {
         let Some(authentication_message) = Self::next_message(&mut self.socket).await else {
             return Err(ClientError::AuthenticationFailed);
         };
 
-        let IncomingSocketMessage::Authenticate { password } = authentication_message else {
+        let IncomingSocketMessage::Authenticate { client_info, password } = authentication_message else {
             return Err(ClientError::AuthenticationFailed);
         };
 
@@ -98,7 +101,7 @@ impl Client {
             return Err(ClientError::AuthenticationFailed);
         }
 
-        Ok(())
+        Ok(client_info)
     }
 
     async fn next_message(
@@ -106,7 +109,6 @@ impl Client {
     ) -> Option<IncomingSocketMessage> {
         let option = socket.next().await;
 
-        dbg!(&option);
         let Some(Ok(Message::Text(string))) = option else {
             return None;
         };
@@ -122,6 +124,26 @@ impl Client {
         let message_json = serde_json::to_string(&message)?;
 
         self.socket.send(Message::Text(message_json)).await?;
+
+        Ok(())
+    }
+
+    async fn handle_incoming_message(
+        &mut self,
+        client_info: &ClientInfo,
+        message: IncomingSocketMessage,
+    ) -> Result<(), ClientError> {
+        match &message {
+            IncomingSocketMessage::UnprocessableContent => {}
+            IncomingSocketMessage::Authenticate { .. } => {
+                self.send_message(OutgoingSocketMessage::IncorrectTime)
+                    .await?;
+            }
+            _ => {
+                self.broadcast.send(message)
+                    .await?;
+            }
+        }
 
         Ok(())
     }

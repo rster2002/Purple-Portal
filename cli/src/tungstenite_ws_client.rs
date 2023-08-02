@@ -109,4 +109,8 @@ impl WsClient<WsClientOutgoing, WsClientIncoming> for TungsteniteWsClient {
             .await
             .ok_or(TungsteniteWsError::IncomingChannelEnded)
     }
+
+    async fn close(mut self) -> Result<(), Self::Err> {
+        Ok(())
+    }
 }

@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use crate::models::client_info::ClientInfo;
 use crate::models::local_state::LocalOpLog;
 
 #[derive(Debug, Deserialize)]
@@ -12,6 +13,9 @@ pub enum WsClientIncoming {
 #[serde(tag = "type", content = "payload", rename_all = "camelCase")]
 pub enum WsClientOutgoing {
     UnprocessableContent,
-    Authenticate { password: String },
+    Authenticate {
+        client_info: ClientInfo,
+        password: String,
+    },
     Sync(LocalOpLog),
 }

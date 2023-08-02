@@ -1,10 +1,13 @@
 use serde::{Deserialize, Serialize};
+use crate::models::client_info::ClientInfo;
 use crate::models::remote_op_log::RemoteOpLog;
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", content = "payload", rename_all = "camelCase")]
 pub enum IncomingSocketMessage {
+    UnprocessableContent,
     Authenticate {
+        client_info: ClientInfo,
         password: String,
     },
 
@@ -16,6 +19,8 @@ pub enum IncomingSocketMessage {
 pub enum OutgoingSocketMessage {
     AuthenticationFailed,
     AuthenticationSuccess,
+
+    IncorrectTime,
 
     #[serde(rename = "error")]
     ClientError(ErrorMessage),

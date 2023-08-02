@@ -5,6 +5,8 @@ use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 
 use serde::Serialize;
+use uuid::Uuid;
+use crate::models::client_info::ClientInfo;
 
 use crate::models::ws_messages::{WsClientIncoming, WsClientOutgoing};
 use crate::prelude::*;
@@ -31,6 +33,7 @@ where
 {
     pub(crate) vault_root: PathBuf,
     pub(crate) config_root: PathBuf,
+    pub(crate) client_info: ClientInfo,
     pub(crate) fs_adapter: T,
     pub(crate) ws_client: C,
 }
@@ -45,8 +48,26 @@ where
 
         wrap_ws_error!(fs_adapter.create_dir_all(&config_root).await)?;
 
+        let client_info_path = config_root.join("client.bin");
+        let client_info: ClientInfo = if fs_adapter.exists(&client_info_path).await? {
+            let binary = fs_adapter.read_file(&client_info_path)
+                .await?;
+
+            bincode::deserialize(&binary)?
+        } else {
+            let local_info = ClientInfo {
+                id: Uuid::new_v4().to_string(),
+            };
+
+            fs_adapter.write_file(&client_info_path, &bincode::serialize(&local_info)?)
+                .await?;
+
+            local_info
+        };
+
         wrap_ws_error!(ws_client
             .send(WsClientOutgoing::Authenticate {
+                client_info: client_info.clone(),
                 password: "abc".to_string(),
             })
             .await)?;
@@ -60,6 +81,7 @@ where
         Ok(Self {
             vault_root,
             config_root,
+            client_info,
             fs_adapter,
             ws_client,
         })

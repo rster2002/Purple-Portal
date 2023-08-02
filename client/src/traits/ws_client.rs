@@ -16,4 +16,5 @@ where
     async fn connect(addr: String) -> Result<Self, Self::Err>;
     async fn send(&mut self, message: O) -> Result<(), Self::Err>;
     async fn receive(&mut self) -> Result<I, Self::Err>;
+    async fn close(self) -> Result<(), Self::Err>;
 }
