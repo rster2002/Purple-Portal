@@ -31,6 +31,9 @@ impl SignallingManager {
         }
     }
 
-    pub fn add_client(&mut self, client: WsClient) {
+    pub async fn add_client(&mut self, client: WsClient) {
+        self.clients.write()
+            .await
+            .push(client);
     }
 }

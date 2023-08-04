@@ -19,10 +19,11 @@ impl PurplePortalServer {
         }
     }
 
-    pub async fn start(&mut self) {
+    pub async fn start(&mut self) -> Result<(), error::Error> {
         let server = TcpListener::bind("127.0.0.1:9001")
             .await?;
 
+        println!("Listening to socket");
         loop {
             let accept_result = server.accept().await;
 
@@ -33,6 +34,9 @@ impl PurplePortalServer {
 
             let client = WsClient::accept(stream)
                 .await?;
+
+            self.signalling_manager.add_client(client)
+                .await;
         }
 
         // let server = TcpListener::bind("127.0.0.1:9001").await.unwrap();
