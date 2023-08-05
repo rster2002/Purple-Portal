@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use crate::modules::signalling_manager::models::remote_op_log::RemoteOpLog;
 use crate::modules::ws_client::models::client_info::ClientInfo;
@@ -12,6 +13,9 @@ pub enum IncomingMessage {
         client_info: ClientInfo,
         password: String,
     },
+
+    /// Send by the client to indicate it wants to send a new file to the server.
+    NotifyNewFile(PathBuf),
 }
 
 /// An outgoing message to the client (send by the server TO the client)
