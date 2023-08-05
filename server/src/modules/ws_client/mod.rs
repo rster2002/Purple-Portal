@@ -47,6 +47,8 @@ impl WsClient {
         Ok((outgoing_sender, incoming_receiver))
     }
 
+    /// Runs the websocket loop. This function will return `Ok(())` when the socket closes
+    /// gratefully and will return an Err if something happens that could not be recovered from.
     async fn run_loop(&mut self) -> Result<(), WsError> {
         let authentication_message = self.receive_with_timeout()
             .await?;
@@ -89,27 +91,12 @@ impl WsClient {
         Ok(())
     }
 
+    /// Receive and wait on the next message of the client.
     pub async fn receive(&mut self) -> Result<IncomingMessage, WsError> {
         let message = self.ws_stream.next()
             .await
             .ok_or(WsError::SocketClosed)??;
 
-        Self::handle_message(message)
-    }
-
-    pub async fn receive_with_timeout(&mut self) -> Result<IncomingMessage, WsError> {
-        tokio::select! {
-            v = self.receive() => {
-                v
-            },
-
-            v = tokio::time::sleep(Duration::from_millis(WS_TIMEOUT)) => {
-                Err(OutgoingMessage::Timeout.into())
-            },
-        }
-    }
-
-    fn handle_message(message: Message) -> Result<IncomingMessage, WsError> {
         let Message::Text(string) = message else {
             return Err(OutgoingMessage::IncorrectFormat.into());
         };
@@ -122,5 +109,19 @@ impl WsClient {
         };
 
         Ok(incoming_message)
+    }
+
+    /// Receive the next message from the client. If the client did not send something within
+    /// the expected time frame, it returns an error with an [OutgoingMessage::Timeout].
+    pub async fn receive_with_timeout(&mut self) -> Result<IncomingMessage, WsError> {
+        tokio::select! {
+            v = self.receive() => {
+                v
+            },
+
+            v = tokio::time::sleep(Duration::from_millis(WS_TIMEOUT)) => {
+                Err(OutgoingMessage::Timeout.into())
+            },
+        }
     }
 }
