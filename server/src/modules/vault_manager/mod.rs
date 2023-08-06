@@ -1,8 +1,8 @@
 pub mod error;
 
 use std::path::PathBuf;
-use safe_path::scoped_join;
 use crate::modules::vault_manager::error::VaultError;
+use crate::utils::safe_join::safe_join;
 
 pub struct VaultManager {
     root: PathBuf,
@@ -17,7 +17,7 @@ impl VaultManager {
 
     /// Securely resolves the path relative to the root.
     fn resolve_path(&self, path: PathBuf) -> Result<PathBuf, VaultError> {
-        Ok(scoped_join(&self.root, &path)?)
+        Ok(safe_join(&self.root, &path))
     }
 
     /// Checks whether the paths exists on the server. Returns true if any data is stored from any

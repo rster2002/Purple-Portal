@@ -7,6 +7,7 @@ use crate::modules::ws_client::WsClient;
 
 mod error;
 mod modules;
+mod utils;
 
 pub struct PurplePortalServer {
     signalling_manager: SignallingManager,
@@ -35,8 +36,8 @@ impl PurplePortalServer {
             let client = WsClient::accept(stream)
                 .await?;
 
-            // self.signalling_manager.add_client(client)
-            //     .await;
+            self.signalling_manager.add_client(client)
+                .await;
         }
 
         // let server = TcpListener::bind("127.0.0.1:9001").await.unwrap();

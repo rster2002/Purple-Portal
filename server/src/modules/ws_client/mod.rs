@@ -7,6 +7,7 @@ use crate::modules::ws_client::error::WsError;
 use crate::modules::ws_client::models::ws_messages::{IncomingMessage, OutgoingMessage};
 use futures_util::stream::StreamExt;
 use tokio_tungstenite::tungstenite::Message;
+use crate::PurplePortalServer;
 
 pub mod models;
 pub mod error;
@@ -15,36 +16,38 @@ const WS_TIMEOUT: u64 = 1000;
 
 pub struct WsClient {
     ws_stream: WebSocketStream<TcpStream>,
-    // sender: Sender<OutgoingMessage>,
-    // receiver: Receiver<IncomingMessage>,
 }
 
 impl WsClient {
-    pub async fn accept(stream: TcpStream) -> Result<(Sender<OutgoingMessage>, Receiver<IncomingMessage>), WsError> {
-        let (incoming_sender, incoming_receiver) = tokio::sync::mpsc::channel(32);
-        let (outgoing_sender, outgoing_receiver) = tokio::sync::mpsc::channel(32);
-
+    pub async fn accept(stream: TcpStream) -> Result<Self, WsError> {
+        // let (incoming_sender, incoming_receiver) = tokio::sync::mpsc::channel(32);
+        // let (outgoing_sender, outgoing_receiver) = tokio::sync::mpsc::channel(32);
+        //
         let ws_stream = accept_async(stream)
             .await?;
+        //
+        let client = WsClient {
+            ws_stream,
+        };
 
-        let mut client = WsClient { ws_stream };
-
-        tokio::spawn(async move {
-            let result = client.run_loop()
-                .await;
-
-            if let Err(error) = result {
-                if let WsError::OutgoingError(outgoing) = error {
-                    let _ = client.send(outgoing)
-                        .await;
-                } else {
-                    let _ = client.send(OutgoingMessage::InternalServerError)
-                        .await;
-                }
-            }
-        });
-
-        Ok((outgoing_sender, incoming_receiver))
+        Ok(client)
+        //
+        // tokio::spawn(async move {
+        //     let result = client.run_loop()
+        //         .await;
+        //
+        //     if let Err(error) = result {
+        //         if let WsError::OutgoingError(outgoing) = error {
+        //             let _ = client.send(outgoing)
+        //                 .await;
+        //         } else {
+        //             let _ = client.send(OutgoingMessage::InternalServerError)
+        //                 .await;
+        //         }
+        //     }
+        // });
+        //
+        // Ok((outgoing_sender, incoming_receiver))
     }
 
     /// Runs the websocket loop. This function will return `Ok(())` when the socket closes
