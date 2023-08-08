@@ -20,111 +20,92 @@ pub struct WsClient {
 
 impl WsClient {
     pub async fn accept(stream: TcpStream) -> Result<Self, WsError> {
-        // let (incoming_sender, incoming_receiver) = tokio::sync::mpsc::channel(32);
-        // let (outgoing_sender, outgoing_receiver) = tokio::sync::mpsc::channel(32);
-        //
         let ws_stream = accept_async(stream)
             .await?;
-        //
+
         let client = WsClient {
             ws_stream,
         };
 
         Ok(client)
-        //
-        // tokio::spawn(async move {
-        //     let result = client.run_loop()
-        //         .await;
-        //
-        //     if let Err(error) = result {
-        //         if let WsError::OutgoingError(outgoing) = error {
-        //             let _ = client.send(outgoing)
-        //                 .await;
-        //         } else {
-        //             let _ = client.send(OutgoingMessage::InternalServerError)
-        //                 .await;
-        //         }
-        //     }
-        // });
-        //
-        // Ok((outgoing_sender, incoming_receiver))
     }
 
     /// Runs the websocket loop. This function will return `Ok(())` when the socket closes
     /// gratefully and will return an Err if something happens that could not be recovered from.
     async fn run_loop(&mut self) -> Result<(), WsError> {
-        let authentication_message = self.receive_with_timeout()
-            .await?;
+        todo!()
+        // let authentication_message = self.receive_with_timeout()
+        //     .await?;
+        //
+        // let IncomingMessage::Authenticate { password, client_info } = authentication_message else {
+        //     return Err(OutgoingMessage::Conflict.into());
+        // };
+        //
+        // if password != "abc".to_string() {
+        //     return Err(OutgoingMessage::AuthenticationFailed.into());
+        // }
+        //
+        // self.send(OutgoingMessage::AuthenticationSuccess)
+        //     .await?;
 
-        let IncomingMessage::Authenticate { password, client_info } = authentication_message else {
-            return Err(OutgoingMessage::Conflict.into());
-        };
-
-        if password != "abc".to_string() {
-            return Err(OutgoingMessage::AuthenticationFailed.into());
-        }
-
-        self.send(OutgoingMessage::AuthenticationSuccess)
-            .await?;
-
-        loop {
-            tokio::select! {
-                v = self.receive() => {
-                    if let Err(ws_error) = v {
-                        if let WsError::OutgoingError(outgoing) = ws_error {
-                            self.send(outgoing)
-                                .await?;
-
-                            continue;
-                        } else {
-                            return Err(ws_error);
-                        }
-                    }
-                },
-            }
-        }
+        // loop {
+        //     tokio::select! {
+        //         v = self.receive() => {
+        //             // if let Err(ws_error) = v {
+        //             //     if let WsError::OutgoingError(outgoing) = ws_error {
+        //             //         self.send(outgoing)
+        //             //             .await?;
+        //             //
+        //             //         continue;
+        //             //     } else {
+        //             //         return Err(ws_error);
+        //             //     }
+        //             // }
+        //         },
+        //     }
+        // }
     }
 
-    pub async fn send(&mut self, message: OutgoingMessage) -> Result<(), WsError> {
-        let json_string = serde_json::to_string(&message)?;
-
-        self.ws_stream.send(Message::Text(json_string))
-            .await?;
-
-        Ok(())
-    }
-
-    /// Receive and wait on the next message of the client.
-    pub async fn receive(&mut self) -> Result<IncomingMessage, WsError> {
-        let message = self.ws_stream.next()
-            .await
-            .ok_or(WsError::SocketClosed)??;
-
-        let Message::Text(string) = message else {
-            return Err(OutgoingMessage::IncorrectFormat.into());
-        };
-
-        let incoming_message = match serde_json::from_str(&string) {
-            Ok(message) => message,
-            Err(error) => {
-                return Err(OutgoingMessage::FailedToParseJson(error.to_string()).into());
-            },
-        };
-
-        Ok(incoming_message)
-    }
-
-    /// Receive the next message from the client. If the client did not send something within
-    /// the expected time frame, it returns an error with an [OutgoingMessage::Timeout].
-    pub async fn receive_with_timeout(&mut self) -> Result<IncomingMessage, WsError> {
-        tokio::select! {
-            v = self.receive() => {
-                v
-            },
-
-            v = tokio::time::sleep(Duration::from_millis(WS_TIMEOUT)) => {
-                Err(OutgoingMessage::Timeout.into())
-            },
-        }
-    }
+    // pub async fn send(&mut self, message: OutgoingMessage) -> Result<(), WsError> {
+    //     let json_string = serde_json::to_string(&message)?;
+    //
+    //     self.ws_stream.send(Message::Text(json_string))
+    //         .await?;
+    //
+    //     Ok(())
+    // }
+    //
+    // /// Receive and wait on the next message of the client.
+    // pub async fn receive(&mut self) -> Result<IncomingMessage, WsError> {
+    //     let message = self.ws_stream.next()
+    //         .await
+    //         .ok_or(WsError::SocketClosed)??;
+    //
+    //     let Message::Text(string) = message else {
+    //         return Err(OutgoingMessage::IncorrectFormat.into());
+    //     };
+    //
+    //     let incoming_message = match serde_json::from_str(&string) {
+    //         Ok(message) => message,
+    //         Err(error) => {
+    //             return Err(OutgoingMessage::FailedToParseJson(error.to_string()).into());
+    //         },
+    //     };
+    //
+    //     Ok(incoming_message)
+    // }
+    //
+    // /// Receive the next message from the client. If the client did not send something within
+    // /// the expected time frame, it returns an error with an [OutgoingMessage::Timeout].
+    // pub async fn receive_with_timeout(&mut self) -> Result<IncomingMessage, WsError> {
+    //     tokio::select! {
+    //         v = self.receive() => {
+    //             v
+    //         },
+    //
+    //         v = tokio::time::sleep(Duration::from_millis(WS_TIMEOUT)) => {
+    //             Err(OutgoingMessage::Timeout.into())
+    //         },
+    //     }
+    // }
 }
