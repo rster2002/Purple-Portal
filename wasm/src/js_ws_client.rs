@@ -34,4 +34,8 @@ impl WsClient<WsClientOutgoing, WsClientIncoming> for JsWsClient {
     async fn receive(&mut self) -> Result<WsClientIncoming, Self::Err> {
         todo!()
     }
+
+    async fn close(self) -> Result<(), Self::Err> {
+        todo!()
+    }
 }
