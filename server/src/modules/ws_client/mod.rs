@@ -11,6 +11,7 @@ use crate::PurplePortalServer;
 
 pub mod models;
 pub mod error;
+mod wrapped_receiver;
 
 const WS_TIMEOUT: u64 = 1000;
 
