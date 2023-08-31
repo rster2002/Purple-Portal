@@ -1,1 +1,1 @@
-pub mod procedure_kind;
+mod procedure_ref;

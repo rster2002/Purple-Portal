@@ -15,3 +15,4 @@ diamond-types = { version = "1.0.0", features = ["serde"] }
 futures-util = "0.3.28"
 serde_json = "1.0.104"
 async-trait = "0.1.72"
+rand = "0.8.5"
